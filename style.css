@@ -586,7 +586,8 @@ footer {
     align-items: flex-end;
   }
   .credit {
-    display: block;
+    /* display: block; */
+    display: none;
   }
 }
 
