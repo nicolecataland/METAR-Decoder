@@ -645,7 +645,7 @@ footer {
   color: var(--muted);
   text-transform: uppercase;
 }
-.remark-item code {
+/* .remark-item code {
   display: inline-block;
   justify-self: start;
   font: 0.72rem var(--mono);
@@ -653,6 +653,17 @@ footer {
   background: #22282b;
   color: #f7f8f8;
   padding: 3px 6px;
+} */
+
+.remark-item code {
+    display: inline-block;
+    justify-self: start;
+    align-self: start;
+    font: 0.72rem var(--mono);
+    font-weight: 400;
+    background: #22282b;
+    color: #f7f8f8;
+    padding: 3px 6px;
 }
 
 .wind-arrow {

@@ -111,7 +111,8 @@ function stationLocalTime(d) {
       minute: "2-digit",
       hour12: true,
       timeZoneName: "short",
-    }).format(date);
+    }).format(date) + " (Local Time)";
+    // }).format(date);
   } catch (e) {
     return `Day ${d.time.day}, ${String(d.time.hour).padStart(2, "0")}:${String(d.time.minute).padStart(2, "0")} UTC`;
   }
@@ -925,7 +926,8 @@ function render(d) {
     const sub =
       (d.wind.direction === "VRB"
         ? "Variable direction"
-        : compass(+d.wind.direction)) +
+        // : compass(+d.wind.direction)) +
+        : `From ${compass(+d.wind.direction)}`) +
       (d.wind.gust ? ` · gusting ${d.wind.gust} ${unit}` : "") +
       (d.variableWind
         ? ` · varying ${d.variableWind.from}°–${d.variableWind.to}°`
