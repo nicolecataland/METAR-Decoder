@@ -103,15 +103,17 @@ function stationLocalTime(d) {
   if (!tz)
     return `Day ${d.time.day}, ${String(d.time.hour).padStart(2, "0")}:${String(d.time.minute).padStart(2, "0")} UTC · local time unavailable`;
   try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-      timeZoneName: "short",
-    }).format(date) + " (Local Time)";
+    return (
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      }).format(date) + " (Local Time)"
+    );
     // }).format(date);
   } catch (e) {
     return `Day ${d.time.day}, ${String(d.time.hour).padStart(2, "0")}:${String(d.time.minute).padStart(2, "0")} UTC`;
@@ -432,11 +434,53 @@ function pressureTendencyText(a) {
 }
 function decodeRemarkToken(t, d) {
   let m, text;
+
   if (t === "AO1")
     return "Automated station without a precipitation discriminator";
+
   if (t === "AO2")
     return "Automated station with a precipitation discriminator";
-  if (t === "$") return "Automated station maintenance/check indicator";
+
+  if (t === "$")
+    return "Automated station maintenance/check indicator";
+
+  if (/^TS(?:[BE]\d{2,4})+$/.test(t)) {
+    const events = [...t.slice(2).matchAll(/([BE])(\d{2}|\d{4})/g)];
+
+    return events
+      .map((event) => {
+        const action =
+          event[1] === "B"
+            ? "Thunderstorm began"
+            : "Thunderstorm ended";
+
+        return `${action} at ${remarkTimeText(event[2])}`;
+      })
+      .join("; ");
+  }
+
+  if (/^LTG(?:IC|CC|CG|CA)+$/.test(t)) {
+    const codes = t.slice(3);
+    const types = [];
+
+    for (let i = 0; i < codes.length; i += 2) {
+      const type = codes.slice(i, i + 2);
+
+      if (type === "IC")
+        types.push("in-cloud");
+      else if (type === "CC")
+        types.push("cloud-to-cloud");
+      else if (type === "CG")
+        types.push("cloud-to-ground");
+      else if (type === "CA")
+        types.push("cloud-to-air");
+    }
+
+    return types.length
+      ? `${types.join(" and ")} lightning`
+      : "Lightning";
+  }
+
   const sensor = {
     PWINO: "Precipitation identifier information not available",
     PNO: "Precipitation amount not available",
@@ -445,50 +489,189 @@ function decodeRemarkToken(t, d) {
     RVRNO: "Runway visual range information not available",
     SLPNO: "Sea-level pressure not available",
   };
-  if (sensor[t]) return sensor[t];
-  if (t === "PRESRR") return "Pressure rising rapidly";
-  if (t === "PRESFR") return "Pressure falling rapidly";
-  if ((text = decodePrecipTiming(t))) return text;
+
+  if (sensor[t])
+    return sensor[t];
+
+  if (t === "PRESRR")
+    return "Pressure rising rapidly";
+
+  if (t === "PRESFR")
+    return "Pressure falling rapidly";
+
+  if (t === "OCNL")
+    return "Occasional";
+
+  if (t === "FRQ")
+    return "Frequent";
+
+  if (t === "CONS")
+    return "Continuous";
+
+  if (t === "OHD")
+    return "Overhead";
+
+  if (t === "MOV")
+    return "Moving";
+
+  if (t === "TS")
+    return "Thunderstorm";
+
+  if (/^(N|NE|E|SE|S|SW|W|NW)$/.test(t)) {
+    const directions = {
+      N: "North",
+      NE: "Northeast",
+      E: "East",
+      SE: "Southeast",
+      S: "South",
+      SW: "Southwest",
+      W: "West",
+      NW: "Northwest",
+    };
+
+    return directions[t];
+  }
+
+  if ((text = decodePrecipTiming(t)))
+    return text;
+
   if ((m = t.match(/^SLP(\d{3})$/))) {
     let h = Number(m[1]) / 10;
     h += h < 50 ? 1000 : 900;
+
     return `Sea-level pressure ${h.toFixed(1)} hPa`;
   }
+
   if ((m = t.match(/^P(\d{4})$/))) {
     const n = Number(m[1]);
+
     return n === 0
       ? "Trace precipitation since the previous hourly observation (<0.01 in)"
       : `Hourly precipitation ${(n / 100).toFixed(2)} in since the previous hourly observation`;
   }
+
   if ((m = t.match(/^6(\d{4})$/))) {
     const n = Number(m[1]);
+
     return n === 0
       ? "Trace precipitation during the applicable 3- or 6-hour period (<0.01 in)"
       : `${(n / 100).toFixed(2)} in precipitation during the applicable 3- or 6-hour period`;
   }
+
   if ((m = t.match(/^7(\d{4})$/))) {
     const n = Number(m[1]);
+
     return n === 0
       ? "Trace precipitation during the past 24 hours (<0.01 in)"
       : `${(n / 100).toFixed(2)} in precipitation during the past 24 hours`;
   }
+
   if ((m = t.match(/^T([01])(\d{3})([01])(\d{3})$/))) {
     d.preciseTemp = remarkTemp(m[1], m[2]);
     d.preciseDew = remarkTemp(m[3], m[4]);
+
     return `Precise temperature ${d.preciseTemp.toFixed(1)}°C; dew point ${d.preciseDew.toFixed(1)}°C`;
   }
   if ((m = t.match(/^1([01])(\d{3})$/)))
     return `6-hour maximum temperature ${remarkTemp(m[1], m[2]).toFixed(1)}°C`;
+
   if ((m = t.match(/^2([01])(\d{3})$/)))
     return `6-hour minimum temperature ${remarkTemp(m[1], m[2]).toFixed(1)}°C`;
+
   if ((m = t.match(/^4([01])(\d{3})([01])(\d{3})$/)))
     return `24-hour maximum temperature ${remarkTemp(m[1], m[2]).toFixed(1)}°C; minimum ${remarkTemp(m[3], m[4]).toFixed(1)}°C`;
+
   if ((m = t.match(/^5([0-8])(\d{3})$/)))
     return `3-hour pressure tendency: ${pressureTendencyText(m[1])}; change ${(Number(m[2]) / 10).toFixed(1)} hPa`;
+
   if ((m = t.match(/^CIG(\d{3})V(\d{3})$/)))
     return `Ceiling varying between ${Number(m[1]) * 100} and ${Number(m[2]) * 100} ft`;
+
   return null;
 }
+// function decodeRemarkToken(t, d) {
+//   let m, text;
+//   if (t === "AO1")
+//     return "Automated station without a precipitation discriminator";
+//   if (t === "AO2")
+//     return "Automated station with a precipitation discriminator";
+//   if (t === "$") return "Automated station maintenance/check indicator";
+//   const sensor = {
+//     PWINO: "Precipitation identifier information not available",
+//     PNO: "Precipitation amount not available",
+//     FZRANO: "Freezing-rain sensor information not available",
+//     TSNO: "Thunderstorm information not available",
+//     RVRNO: "Runway visual range information not available",
+//     SLPNO: "Sea-level pressure not available",
+//   };
+//   if (sensor[t]) return sensor[t];
+//   if (t === "PRESRR") return "Pressure rising rapidly";
+//   if (t === "PRESFR") return "Pressure falling rapidly";
+//   if (t === "OCNL") return "Occasional";
+//   if (t === "FRQ") return "Frequent";
+//   if (t === "CONS") return "Continuous";
+
+//   if (t === "OHD") return "Overhead";
+
+//   if (t === "MOV") return "Moving";
+
+//   if (t === "TS") return "Thunderstorm";
+
+//   if (/^(N|NE|E|SE|S|SW|W|NW)$/.test(t)) {
+//     const directions = {
+//       N: "North",
+//       NE: "Northeast",
+//       E: "East",
+//       SE: "Southeast",
+//       S: "South",
+//       SW: "Southwest",
+//       W: "West",
+//       NW: "Northwest",
+//     };
+
+//     return directions[t];
+//   }
+//   if ((text = decodePrecipTiming(t))) return text;
+//   if ((m = t.match(/^SLP(\d{3})$/))) {
+//     let h = Number(m[1]) / 10;
+//     h += h < 50 ? 1000 : 900;
+//     return `Sea-level pressure ${h.toFixed(1)} hPa`;
+//   }
+//   if ((m = t.match(/^P(\d{4})$/))) {
+//     const n = Number(m[1]);
+//     return n === 0
+//       ? "Trace precipitation since the previous hourly observation (<0.01 in)"
+//       : `Hourly precipitation ${(n / 100).toFixed(2)} in since the previous hourly observation`;
+//   }
+//   if ((m = t.match(/^6(\d{4})$/))) {
+//     const n = Number(m[1]);
+//     return n === 0
+//       ? "Trace precipitation during the applicable 3- or 6-hour period (<0.01 in)"
+//       : `${(n / 100).toFixed(2)} in precipitation during the applicable 3- or 6-hour period`;
+//   }
+//   if ((m = t.match(/^7(\d{4})$/))) {
+//     const n = Number(m[1]);
+//     return n === 0
+//       ? "Trace precipitation during the past 24 hours (<0.01 in)"
+//       : `${(n / 100).toFixed(2)} in precipitation during the past 24 hours`;
+//   }
+//   if ((m = t.match(/^T([01])(\d{3})([01])(\d{3})$/))) {
+//     d.preciseTemp = remarkTemp(m[1], m[2]);
+//     d.preciseDew = remarkTemp(m[3], m[4]);
+//     return `Precise temperature ${d.preciseTemp.toFixed(1)}°C; dew point ${d.preciseDew.toFixed(1)}°C`;
+//   }
+//   if ((m = t.match(/^1([01])(\d{3})$/)))
+//     return `6-hour maximum temperature ${remarkTemp(m[1], m[2]).toFixed(1)}°C`;
+//   if ((m = t.match(/^2([01])(\d{3})$/)))
+//     return `6-hour minimum temperature ${remarkTemp(m[1], m[2]).toFixed(1)}°C`;
+//   if ((m = t.match(/^4([01])(\d{3})([01])(\d{3})$/)))
+//     return `24-hour maximum temperature ${remarkTemp(m[1], m[2]).toFixed(1)}°C; minimum ${remarkTemp(m[3], m[4]).toFixed(1)}°C`;
+//   if ((m = t.match(/^5([0-8])(\d{3})$/)))
+//     return `3-hour pressure tendency: ${pressureTendencyText(m[1])}; change ${(Number(m[2]) / 10).toFixed(1)} hPa`;
+//   if ((m = t.match(/^CIG(\d{3})V(\d{3})$/)))
+//     return `Ceiling varying between ${Number(m[1]) * 100} and ${Number(m[2]) * 100} ft`;
+//   return null;
+// }
 function parseRemarks(d) {
   if (!d.remarks) return;
   const rt = d.remarks.split(/\s+/);
@@ -546,7 +729,78 @@ function parseRemarks(d) {
       code = dir ? `VIRGA ${dir}` : t;
       text = `Virga${dir ? ` ${dir} of the station` : ""}`;
       if (dir) i++;
+
+      // Thunderstorm beginning/ending times:
+      // TSB31, TSE28, TSB31E47, TSE28B31, TSE28B31E47, etc.
+    } else if ((m = t.match(/^TS((?:B|E)\d{2,4})+$/))) {
+      const events = [...t.slice(2).matchAll(/([BE])(\d{2}|\d{4})/g)];
+
+      code = t;
+
+      text = events
+        .map((event) => {
+          const action =
+            event[1] === "B" ? "Thunderstorm began" : "Thunderstorm ended";
+
+          return `${action} at ${remarkTimeText(event[2])}`;
+        })
+        .join("; ");
+
+      // Lightning frequency/type/location:
+      // e.g. OCNL LTGICCG OHD
+    } else if (
+      /^(OCNL|FRQ|CONS)$/.test(t) &&
+      /^LTG[A-Z]+$/.test(rt[i + 1] || "")
+    ) {
+      const frequency = {
+        OCNL: "Occasional",
+        FRQ: "Frequent",
+        CONS: "Continuous",
+      }[t];
+
+      const lightningToken = rt[i + 1];
+      const lightningCodes = lightningToken.slice(3);
+
+      const types = [];
+      if (lightningCodes.includes("IC")) types.push("in-cloud");
+      if (lightningCodes.includes("CC")) types.push("cloud-to-cloud");
+      if (lightningCodes.includes("CG")) types.push("cloud-to-ground");
+      if (lightningCodes.includes("CA")) types.push("cloud-to-air");
+
+      code = `${t} ${lightningToken}`;
+      text = `${frequency} ${types.join(" and ")} lightning`;
+
+      i++;
+
+      if (rt[i + 1] === "OHD") {
+        code += " OHD";
+        text += " overhead";
+        i++;
+      }
+    } else if (t === "TS") {
+      const parts = ["TS"];
+      let location = "";
+      let movement = "";
+
+      if (rt[i + 1] === "OHD") {
+        parts.push("OHD");
+        location = " overhead";
+        i++;
+      }
+
+      if (
+        rt[i + 1] === "MOV" &&
+        /^(N|NE|E|SE|S|SW|W|NW)$/.test(rt[i + 2] || "")
+      ) {
+        parts.push("MOV", rt[i + 2]);
+        movement = `, moving ${rt[i + 2]}`;
+        i += 2;
+      }
+
+      code = parts.join(" ");
+      text = `Thunderstorm${location}${movement}`;
     } else text = decodeRemarkToken(t, d);
+
     if (text) d.decodedRemarks.push({ code, text });
     else d.undecodedRemarks.push(t);
   }
@@ -906,6 +1160,126 @@ function windArrowHTML(direction) {
 function card(label, value, sub, code, valueClass = "") {
   return `<article class="card"><span class="label">${label}</span><strong class="value ${valueClass}">${value}</strong>${sub ? `<span class="sub">${sub}</span>` : ""}${code ? `<code class="code">${code}</code>` : ""}</article>`;
 }
+
+function cloudCard(d) {
+  const clearCodes = ["CLR", "SKC", "NSC", "NCD"];
+  const clearCloud = d.clouds.find((c) => clearCodes.includes(c.amount));
+
+  // Clear-sky reports
+  if (clearCloud) {
+    return `
+      <article class="card cloud-card">
+        <span class="label">CLOUDS / SKY</span>
+
+        <div class="cloud-clear">
+          <strong class="cloud-clear-value">
+            ${CLOUD[clearCloud.amount] || clearCloud.amount}
+          </strong>
+        </div>
+
+        <code class="code">${clearCloud.code}</code>
+      </article>
+    `;
+  }
+
+  // CAVOK with no separately reported cloud layers
+  if (!d.clouds.length && d.visibility?.cavok) {
+    return `
+      <article class="card cloud-card">
+        <span class="label">CLOUDS / SKY</span>
+
+        <div class="cloud-clear">
+          <strong class="cloud-clear-value">No significant cloud</strong>
+          <span class="sub">CAVOK</span>
+        </div>
+
+        <code class="code">CAVOK</code>
+      </article>
+    `;
+  }
+
+  // No cloud information in the report
+  if (!d.clouds.length) {
+    return `
+      <article class="card cloud-card">
+        <span class="label">CLOUDS / SKY</span>
+
+        <div class="cloud-clear">
+          <strong class="cloud-clear-value">Not reported</strong>
+        </div>
+      </article>
+    `;
+  }
+
+  // Determine the lowest ceiling-producing layer.
+  const ceiling =
+    [...d.clouds]
+      .filter((c) => ["BKN", "OVC", "VV"].includes(c.amount) && c.feet !== null)
+      .sort((a, b) => a.feet - b.feet)[0] || null;
+
+  // Known-height layers are displayed highest to lowest.
+  // Unknown-height layers are retained at the bottom.
+  const layers = [...d.clouds].sort((a, b) => {
+    if (a.feet === null && b.feet === null) return 0;
+    if (a.feet === null) return 1;
+    if (b.feet === null) return -1;
+    return b.feet - a.feet;
+  });
+
+  const layerHTML = layers
+    .map((c) => {
+      const isCeiling = c === ceiling;
+
+      let cloudType = "";
+
+      if (c.type === "CB") {
+        cloudType = " · CUMULONIMBUS";
+      } else if (c.type === "TCU") {
+        cloudType = " · TOWERING CUMULUS";
+      }
+
+      const height =
+        c.feet !== null ? `${c.feet.toLocaleString()} FT` : "HEIGHT N/A";
+
+      return `
+        <div class="cloud-layer ${isCeiling ? "cloud-layer-ceiling" : ""}">
+          <span class="cloud-height">${height}</span>
+
+
+
+          <span class="cloud-rule ${isCeiling ? "cloud-rule-with-label" : ""}" aria-hidden="true">
+            ${isCeiling ? `<span class="ceiling-tag">CEILING</span>` : ""}
+          </span>
+
+          <span class="cloud-layer-info">
+            <strong>${c.amount}</strong>
+            <span>${CLOUD[c.amount] || c.amount}${cloudType}</span>
+          </span>
+        </div>
+      `;
+    })
+    .join("");
+
+  const codes = d.clouds.map((c) => c.code).join(" ");
+
+  return `
+    <article class="card cloud-card">
+      <span class="label">CLOUDS / SKY</span>
+
+      <div class="cloud-layers">
+        ${layerHTML}
+      </div>
+
+      <code class="code">${codes}</code>
+    </article>
+  `;
+}
+
+function capitalizeFirst(text) {
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function render(d) {
   $("#station").textContent = d.station;
   $("#reportType").textContent = d.type;
@@ -926,8 +1300,8 @@ function render(d) {
     const sub =
       (d.wind.direction === "VRB"
         ? "Variable direction"
-        // : compass(+d.wind.direction)) +
-        : `From ${compass(+d.wind.direction)}`) +
+        : // : compass(+d.wind.direction)) +
+          `From ${compass(+d.wind.direction)}`) +
       (d.wind.gust ? ` · gusting ${d.wind.gust} ${unit}` : "") +
       (d.variableWind
         ? ` · varying ${d.variableWind.from}°–${d.variableWind.to}°`
@@ -966,34 +1340,35 @@ function render(d) {
         d.altimeter.code,
       ),
     );
-  const cloudValue = d.clouds.length
-    ? d.clouds.map((c) => CLOUD[c.amount] || c.amount).join(" · ")
-    : d.visibility?.cavok
-      ? "No significant cloud"
-      : "Not reported";
-  const cloudSub = d.clouds.length
-    ? d.clouds
-        .map((c) =>
-          c.feet !== null
-            ? `${c.feet.toLocaleString()} ft AGL${c.type ? ` ${c.type}` : ""}`
-            : CLOUD[c.amount] || c.amount,
-        )
-        .join(" · ")
-    : d.visibility?.cavok
-      ? "CAVOK"
-      : "No cloud group";
-  const cloudCode = d.clouds.length
-    ? d.clouds.map((c) => c.code).join(" ")
-    : d.visibility?.cavok
-      ? "CAVOK"
-      : "—";
-  cards.push(card("CLOUDS", cloudValue, cloudSub, cloudCode));
+  // const cloudValue = d.clouds.length
+  //   ? d.clouds.map((c) => CLOUD[c.amount] || c.amount).join(" · ")
+  //   : d.visibility?.cavok
+  //     ? "No significant cloud"
+  //     : "Not reported";
+  // const cloudSub = d.clouds.length
+  //   ? d.clouds
+  //       .map((c) =>
+  //         c.feet !== null
+  //           ? `${c.feet.toLocaleString()} ft AGL${c.type ? ` ${c.type}` : ""}`
+  //           : CLOUD[c.amount] || c.amount,
+  //       )
+  //       .join(" · ")
+  //   : d.visibility?.cavok
+  //     ? "CAVOK"
+  //     : "No cloud group";
+  // const cloudCode = d.clouds.length
+  //   ? d.clouds.map((c) => c.code).join(" ")
+  //   : d.visibility?.cavok
+  //     ? "CAVOK"
+  //     : "—";
+  // cards.push(card("CLOUDS", cloudValue, cloudSub, cloudCode));
+  cards.push(cloudCard(d));
   $("#cards").innerHTML = cards.join("");
   $("#weatherSection").hidden = !d.weather.length;
   $("#weatherList").innerHTML = d.weather
     .map(
       (w) =>
-        `<div class="detail-row"><code>${w.code}</code><strong>${w.description}</strong><span>Present weather</span></div>`,
+        `<div class="detail-row"><code>${w.code}</code><strong>${capitalizeFirst(w.description)}</strong><span>Present weather</span></div>`,
     )
     .join("");
   $("#remarksSection").hidden = !d.remarks;

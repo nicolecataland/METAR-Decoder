@@ -158,6 +158,7 @@ textarea:focus {
   background: #080a0b;
   color: #fff;
   padding: 22px 24px;
+  padding-bottom: 8px;
   display: flex;
   justify-content: space-between;
   gap: 30px;
@@ -248,6 +249,27 @@ textarea:focus {
 .raw-section {
   margin-top: 16px;
 }
+
+#weatherSection.detail-section {
+  margin-top: 0;
+}
+
+#weatherSection h2 {
+  font: 700 0.69rem var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  /* text-transform: uppercase; */
+}
+
+#weatherList .detail-row code {
+  display: inline-block;
+  width: fit-content;
+  font: 0.72rem var(--mono);
+  background: #22282b;
+  color: #f7f8f8;
+  padding: 3px 6px;
+}
+
 .detail-list {
   display: grid;
   gap: 0;
@@ -686,4 +708,153 @@ footer {
 }
 .wind-card-value > span:not(.wind-arrow) {
   order: 1;
+}
+
+
+/* Cloud card update  */
+
+.cloud-card {
+  min-width: 0;
+}
+
+.cloud-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.cloud-layer {
+  display: grid;
+  grid-template-columns: 70px minmax(16px, 1fr) auto;
+  grid-template-areas:
+    "height rule info"
+    ". . ceiling";
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+}
+
+.cloud-height {
+  grid-area: height;
+
+  font: 0.67rem var(--mono);
+  color: var(--muted);
+
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cloud-rule {
+  grid-area: rule;
+
+  display: block;
+  width: 100%;
+
+  border-top: 1px solid var(--muted);
+  opacity: 0.55;
+}
+
+.cloud-layer-info {
+  grid-area: info;
+
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+
+  min-width: 0;
+}
+
+.cloud-layer-info strong {
+  flex: 0 0 auto;
+
+  font: 600 0.78rem var(--mono);
+  color: var(--ink);
+}
+
+.cloud-layer-info > span {
+  min-width: 0;
+
+  font: 0.62rem var(--mono);
+  color: var(--muted);
+
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+
+.cloud-layer-ceiling .cloud-height {
+  color: var(--ink);
+}
+
+/* .cloud-layer-ceiling .cloud-rule {
+  border-top: 2px solid var(--ink);
+  opacity: 1;
+} */
+
+.cloud-layer-ceiling .cloud-layer-info strong {
+  font-weight: 700;
+}
+
+/* .ceiling-tag {
+  grid-area: ceiling;
+
+  justify-self: start;
+  margin-top: 1px;
+
+  font: 600 0.56rem var(--mono);
+  letter-spacing: 0.08em;
+
+  color: var(--muted);
+} */
+
+.cloud-rule-with-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-top: 0;
+  opacity: 1;
+}
+
+.cloud-rule-with-label::before,
+.cloud-rule-with-label::after {
+  content: "";
+  flex: 1;
+  border-top: 2px solid var(--ink);
+}
+
+.ceiling-tag {
+  flex: 0 0 auto;
+
+  font: 600 0.56rem var(--mono);
+  letter-spacing: 0.08em;
+  line-height: 1;
+
+  color: var(--muted);
+}
+
+.cloud-clear {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  margin-top: 13px;
+}
+
+.cloud-clear-value {
+  font-family: var(--sans);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.cloud-card > .code {
+  margin-top: 15px;
+}
+
+
+@media (max-width: 480px) {
+  .cloud-layer {
+    grid-template-columns: 72px minmax(20px, 1fr) auto;
+  }
 }

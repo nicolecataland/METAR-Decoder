@@ -1,81 +1,139 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>METAR Decoder</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <main class="shell">
-    <header class="masthead">
-      <div>
-        <!-- <p class="eyebrow">METEOROLOGICAL AERODROME REPORT UTILITY</p> -->
-        <h1>METAR Decoder</h1>
-      </div>
-      <div class="header-meta">
-        <p class="credit">By N. Cataland</p>
-        <div class="utc" aria-label="UTC clock"><span>UTC</span><strong id="utcClock">--:--:--Z</strong></div>
-      </div>
-    </header>
-
-    <section class="input-panel" aria-labelledby="inputTitle">
-      <div class="section-head">
-        <h2 id="inputTitle">Raw METAR</h2>
-        <button id="exampleBtn" class="text-button" type="button">Load example</button>
-      </div>
-      <textarea id="metarInput" rows="4" spellcheck="false" placeholder="Paste one METAR per line, e.g.&#10;K57C 271815Z AUTO 33003KT 10SM CLR 21/10 A3013 RMK AO2 T02060102 PWINO&#10;K57C 271835Z AUTO 36003KT 10SM CLR 20/11 A3012 RMK AO2 T02010107 PWINO"></textarea>
-      <div class="actions">
-        <p id="inputHint">Press Ctrl/⌘ + Enter to decode. <span id="stationDataStatus">Loading station data…</span></p>
-        <button id="decodeBtn" class="primary" type="button">Decode METAR</button>
-      </div>
-      <p id="error" class="error" role="alert" hidden></p>
-    </section>
-
-    <section id="results" class="results" hidden aria-live="polite">
-      <div class="summary-bar">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>METAR Decoder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
         <div>
-          <p class="eyebrow">LATEST OBSERVATION · STATION</p>
-          <div class="station-line"><h2 id="station">—</h2><span id="reportType" class="chip">METAR</span></div>
-          <p id="stationDescription" class="station-description">Station metadata not in local database</p>
-          <p id="observationTime" class="muted">Observation time unavailable</p>
+          <!-- <p class="eyebrow">METEOROLOGICAL AERODROME REPORT UTILITY</p> -->
+          <h1>METAR Decoder</h1>
         </div>
-        <div id="categoryBlock" class="category-block" hidden>
-          <p class="eyebrow">FLIGHT CATEGORY</p>
-          <strong id="flightCategory">—</strong>
-          <span id="categoryReason"></span>
+        <div class="header-meta">
+          <p class="credit">By N. Cataland</p>
+          <div class="utc" aria-label="UTC clock">
+            <span>UTC</span><strong id="utcClock">--:--:--Z</strong>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div id="cards" class="cards"></div>
-
-      <section id="weatherSection" class="detail-section" hidden>
-        <div class="section-head"><h2>Weather</h2><span class="section-code">PRESENT WX</span></div>
-        <div id="weatherList" class="detail-list"></div>
+      <section class="input-panel" aria-labelledby="inputTitle">
+        <div class="section-head">
+          <h2 id="inputTitle">Raw METAR</h2>
+          <button id="exampleBtn" class="text-button" type="button">
+            Load example
+          </button>
+        </div>
+        <textarea
+          id="metarInput"
+          rows="4"
+          spellcheck="false"
+          placeholder="Paste one METAR per line, e.g.&#10;K57C 271815Z AUTO 33003KT 10SM CLR 21/10 A3013 RMK AO2 T02060102 PWINO&#10;K57C 271835Z AUTO 36003KT 10SM CLR 20/11 A3012 RMK AO2 T02010107 PWINO"
+        ></textarea>
+        <div class="actions">
+          <p id="inputHint">
+            Press Ctrl/⌘ + Enter to decode.
+            <span id="stationDataStatus">Loading station data…</span>
+          </p>
+          <button id="decodeBtn" class="primary" type="button">
+            Decode METAR
+          </button>
+        </div>
+        <p id="error" class="error" role="alert" hidden></p>
       </section>
 
-      <section id="remarksSection" class="detail-section" hidden>
-        <div class="section-head"><h2>Remarks</h2><span class="section-code">RMK</span></div>
+      <section id="results" class="results" hidden aria-live="polite">
+        <div class="summary-bar">
+          <div>
+            <p class="eyebrow">LATEST OBSERVATION · STATION</p>
+            <div class="station-line">
+              <h2 id="station">—</h2>
+              <span id="reportType" class="chip">METAR</span>
+            </div>
+            <p id="stationDescription" class="station-description">
+              Station metadata not in local database
+            </p>
+            <p id="observationTime" class="muted">
+              Observation time unavailable
+            </p>
+          </div>
+          <div id="categoryBlock" class="category-block" hidden>
+            <p class="eyebrow">FLIGHT CATEGORY</p>
+            <strong id="flightCategory">—</strong>
+            <span id="categoryReason"></span>
+          </div>
+        </div>
+
+        <div id="cards" class="cards"></div>
+
+        <section id="weatherSection" class="detail-section" hidden>
+          <div class="section-head">
+            <h2>Weather</h2>
+            <!-- <span class="section-code">PRESENT WX</span> -->
+          </div>
+          <div id="weatherList" class="detail-list"></div>
+        </section>
+
+        <section id="remarksSection" class="detail-section" hidden>
+          <div class="section-head">
+            <h2>Remarks</h2>
+            <span class="section-code">RMK</span>
+          </div>
+        </section>
+
+        <section id="trendSection" class="trend-section" hidden>
+          <div class="section-head">
+            <div>
+              <h2>Observation trend</h2>
+              <p id="trendMeta" class="trend-meta"></p>
+            </div>
+            <span class="section-code">CHRONOLOGICAL</span>
+          </div>
+          <div class="trend-wrap">
+            <table class="trend-table" id="trendTable"></table>
+          </div>
+        </section>
+
+        <section class="raw-section">
+          <div class="section-head">
+            <h2>Original report</h2>
+            <button id="copyBtn" class="text-button" type="button">Copy</button>
+          </div>
+          <p class="raw-help">
+            Hover over any METAR group for details. Keyboard users can focus a
+            group to view the same explanation.
+          </p>
+          <code id="rawOutput" class="interactive-metar"></code>
+          <div
+            id="metarTooltip"
+            class="metar-tooltip"
+            hidden
+            aria-live="polite"
+          >
+            <strong>METAR Group</strong
+            ><span
+              >Hover over or focus a group above to see its category and
+              meaning.</span
+            >
+          </div>
+        </section>
       </section>
 
-      <section id="trendSection" class="trend-section" hidden>
-        <div class="section-head"><div><h2>Observation trend</h2><p id="trendMeta" class="trend-meta"></p></div><span class="section-code">CHRONOLOGICAL</span></div>
-        <div class="trend-wrap"><table class="trend-table" id="trendTable"></table></div>
-      </section>
-
-      <section class="raw-section">
-        <div class="section-head"><h2>Original report</h2><button id="copyBtn" class="text-button" type="button">Copy</button></div>
-        <p class="raw-help">Hover over any METAR group for details. Keyboard users can focus a group to view the same explanation.</p>
-        <code id="rawOutput" class="interactive-metar"></code>
-        <div id="metarTooltip" class="metar-tooltip" hidden aria-live="polite"><strong>METAR Group</strong><span>Hover over or focus a group above to see its category and meaning.</span></div>
-      </section>
-    </section>
-
-    <footer>For interpretation and learning only. Use official aviation weather sources for operational decisions.</footer>
-  </main>
-  <script src="app.js"></script>
-</body>
+      <footer>
+        For interpretation and learning only. Use official aviation weather
+        sources for operational decisions.
+      </footer>
+    </main>
+    <script src="app.js"></script>
+  </body>
 </html>
